@@ -34,20 +34,25 @@ struct block_t {
 };
 
 /** The first and last blocks on the heap */
+static size_t get_size(block_t *block);
+static bool is_allocated(block_t * block);
+static block_t *get_next_block (block_t * block);
+static void list_add(block_t* block);
+static void list_remove(block_t * block);
+
 static block_t *mm_heap_first = NULL;
 static block_t *mm_heap_last = NULL;
-static block_t *search_start = NULL;
 static block_t *free_list_head = NULL;
 static size_t *get_footer(block_t * block ) {
-	return (size_t*) ((uint8_t*)block + get_size(block) - sizeof(size-t);
+	return (size_t*) ((uint8_t*)block + get_size(block) - sizeof(size_t));
 }
 static void set_footer(block_t * block ) {
 	*get_footer(block) = block->header;
 }
 
 static block_t *get_prev_block ( block_t *block ) {
-size_t prev_footer = *(size_t)((uint_t* ) block - sizeof(size_t));
-size_t prev_size = prev_footer & ~(ALIGNMNET -1 );
+size_t prev_footer = *(size_t*)((uint8_t* ) block - sizeof(size_t));
+size_t prev_size = prev_footer & ~(ALIGNMENT -1 );
 return (block_t* ) ((uint8_t*) block - prev_size);
 }
 /** Rounds up `size` to the nearest multiple of `n` */
@@ -106,8 +111,13 @@ bool mm_init(void) {
     mm_heap_first = NULL;
     mm_heap_last = NULL;
     free_list_head = NULL;
-    search_start = mm_heap_first;
     return true;
+}
+static block_t *get_next_block(block_t * block ) {
+	if ( block== mm_heap_last ) {
+		return NULL;
+	}
+	return (block_t*)((uint8_t*)block + get_size(block));
 }
 
 /**
@@ -121,24 +131,20 @@ void *mm_malloc(size_t size) {
     }
     // If there is a large enough free block, use it
     block_t *block = find_fit(size);
-    list_remove(block);
     if (block != NULL) {
+	list_remove(block);
         size_t old_size = get_size(block);
 	size_t remaining = old_size - size;
-	if ( remaining >= ALIGNMENT ) {
+	if ( remaining >= 32 ) {
 		set_header(block,size,true);
 		block_t* new_block = (block_t*)((uint8_t*)block + size );
 		set_header(new_block, remaining, false);
+		list_add(new_block);
 		if ( block == mm_heap_last) {
 			mm_heap_last = new_block;
 		}
-		search_start = new_block;
 	} else {
 		set_header(block,old_size,true);
-		search_start = (block_t*) ((uint8_t*)block + old_size);
-		if ( search_start > mm_heap_last) {
-			search_start = mm_heap_first;
-		}
 	}
 	return block->payload;
 }

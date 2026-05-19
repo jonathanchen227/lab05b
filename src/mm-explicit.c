@@ -102,7 +102,7 @@ static block_t *block_from_payload(void *ptr) {
  */
 bool mm_init(void) {
     // We want the first payload to start at ALIGNMENT bytes from the start of the heap
-    void *padding = mem_sbrk(ALIGNMENT - sizeof(block_t));
+    void *padding = mem_sbrk(ALIGNMENT - sizeof(size_t));
     if (padding == (void *) -1) {
         return false;
     }
